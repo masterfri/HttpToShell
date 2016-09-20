@@ -126,7 +126,7 @@ while (my $socket = $sock->accept(10)) {
 				my $scriptname = join('/', $command_dir, $path);
 				if (-e $scriptname) {
 					my $scriptparams = convert_params($uri);
-					my $command = sprintf('sudo -u %s %s %s 2>>%s', $credentials[0], $scriptname, $scriptparams, $errlog);
+					my $command = sprintf('sudo -H -u %s %s %s 2>>%s', $credentials[0], $scriptname, $scriptparams, $errlog);
 					printlog("[INF] Executing: $command");
 					my $content = qx($command);
 					http_response($socket, 200, $content);
