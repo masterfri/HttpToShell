@@ -9,6 +9,7 @@ use URI;
 use URI::QueryParam;
 use Authen::PAM;
 use Net::Netmask;
+use String::ShellQuote 'shell_quote';
 use Cwd 'abs_path';
 use POSIX qw/ strftime /;
 
@@ -31,12 +32,12 @@ sub check_client {
 }
 
 sub pass_auth {
-    my ($login, $pass) = @_;
-    my $pamh;
-    pam_start("passwd", $login, sub {((0, $pass) x (@_/2), PAM_SUCCESS())}, $pamh);
-    my $res = pam_authenticate($pamh) == PAM_SUCCESS();
-    pam_end($pamh);
-    return $res;
+	my ($login, $pass) = @_;
+	my $pamh;
+	pam_start("passwd", $login, sub {((0, $pass) x (@_/2), PAM_SUCCESS())}, $pamh);
+	my $res = pam_authenticate($pamh) == PAM_SUCCESS();
+	pam_end($pamh);
+	return $res;
 }
 
 sub get_query {
@@ -81,9 +82,9 @@ sub convert_params {
 	my $command;
 	for $paramkey ($uri->query_param) {
 		$paramval = $uri->query_param($paramkey);
-		$paramkey =~ s/([\\'"`\$])/\\$1/g;
-		$paramval =~ s/([\\'"`\$])/\\$1/g;
-		$paramkeyval = join('', '--', $paramkey, ' "', $paramval, '"');
+		$paramkey = shell_quote($paramkey);
+		$paramval = shell_quote($paramval);
+		$paramkeyval = join('', '--', $paramkey, ' ', $paramval);
 		$scriptparams = join(' ', $scriptparams, $paramkeyval);
 	}
 	return $scriptparams;
@@ -126,7 +127,7 @@ while (my $socket = $sock->accept(10)) {
 				my $scriptname = join('/', $command_dir, $path);
 				if (-e $scriptname) {
 					my $scriptparams = convert_params($uri);
-					my $command = sprintf('sudo -H -u %s %s %s 2>>%s', $credentials[0], $scriptname, $scriptparams, $errlog);
+					my $command = sprintf('%s %s 2>>%s', $scriptname, $scriptparams, $errlog);
 					printlog("[INF] Executing: $command");
 					my $content = qx($command);
 					http_response($socket, 200, $content);
